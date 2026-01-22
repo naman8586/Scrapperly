@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Settings, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { scraperAPI } from '../services/api'; // Add this import
 
 const SUPPORTED_FIELDS = ['url', 'title', 'exact_price', 'images', 'description', 'seller', 'rating', 'reviews'];
 
@@ -11,9 +12,6 @@ const FieldSelectorPage = () => {
     const [selectedFields, setSelectedFields] = useState(['url', 'title', 'exact_price', 'images']);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [showCaptcha, setShowCaptcha] = useState(false);
-    const [captchaData] = useState({ type: 'image', url: 'https://via.placeholder.com/300x100?text=CAPTCHA' });
-    const [captchaInput, setCaptchaInput] = useState('');
 
     // Validate navigation state on mount
     useEffect(() => {
@@ -34,84 +32,42 @@ const FieldSelectorPage = () => {
     const handleSelectAll = () => setSelectedFields([...SUPPORTED_FIELDS]);
     const handleSelectNone = () => setSelectedFields([]);
 
-    const generateMockData = () => {
-        const mockData = [
-            {
-                title: `${keyword || 'Product'} 1`,
-                images: ['https://via.placeholder.com/150'],
-                website_name: selectedSite || 'Unknown',
-                url: 'https://example.com/product1',
-                exact_price: '99.99',
-                description: 'Sample product description',
-                seller: 'Sample Seller',
-                rating: '4.5',
-                reviews: '120'
-            },
-            {
-                title: `${keyword || 'Product'} 2`,
-                images: ['https://via.placeholder.com/150'],
-                website_name: selectedSite || 'Unknown',
-                url: 'https://example.com/product2',
-                exact_price: '149.99',
-                description: 'Another product description',
-                seller: 'Another Seller',
-                rating: '4.0',
-                reviews: '85'
-            }
-        ];
-        // Filter mock data to include only selected fields
-        return mockData.map(item => {
-            const filteredItem = {};
-            selectedFields.forEach(field => {
-                filteredItem[field] = item[field];
-            });
-            return filteredItem;
-        });
-    };
-
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (selectedFields.length === 0) {
             setError('Please select at least one field to extract.');
             return;
         }
+        
         setIsLoading(true);
         setError('');
-        if (Math.random() < 0.2) {
-            setTimeout(() => {
-                setShowCaptcha(true);
-                setIsLoading(false);
-            }, 1000);
-        } else {
-            setTimeout(() => {
-                setIsLoading(false);
+        
+        try {
+            const response = await scraperAPI.scrape({
+                site: selectedSite,
+                keyword,
+                pageCount,
+                retries,
+                fields: selectedFields.join(',')
+            });
+
+            if (response.data.success) {
                 navigate('/results', {
                     state: {
                         selectedSite,
                         keyword,
-                        scrapedData: generateMockData()
+                        scrapedData: response.data.data.products
                     }
                 });
-            }, 2000);
-        }
-    };
-
-    const handleCaptchaSubmit = () => {
-        if (!captchaInput.trim()) {
-            setError('Please enter the CAPTCHA text.');
-            return;
-        }
-        setIsLoading(true);
-        setTimeout(() => {
-            setShowCaptcha(false);
+            } else {
+                setError('Scraping failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Scraping error:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to scrape data. Please try again.';
+            setError(errorMessage);
+        } finally {
             setIsLoading(false);
-            navigate('/results', {
-                state: {
-                    selectedSite,
-                    keyword,
-                    scrapedData: generateMockData()
-                }
-            });
-        }, 1500);
+        }
     };
 
     const getFieldIcon = (field) => {
@@ -249,58 +205,6 @@ const FieldSelectorPage = () => {
                         </button>
                     </div>
                 </div>
-
-                {showCaptcha && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
-                            <h2 className="text-2xl font-bold text-white mb-4 text-center">
-                                CAPTCHA Verification
-                            </h2>
-                            <p className="text-gray-300 mb-6 text-center">
-                                Please complete the verification to continue
-                            </p>
-                            <div className="mb-6">
-                                <img
-                                    src={captchaData.url}
-                                    alt="CAPTCHA verification image"
-                                    className="w-full h-32 object-contain bg-gray-800 rounded-lg mb-4"
-                                />
-                                <input
-                                    type="text"
-                                    value={captchaInput}
-                                    onChange={(e) => setCaptchaInput(e.target.value)}
-                                    placeholder="Enter CAPTCHA text"
-                                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20 transition-all"
-                                    aria-label="CAPTCHA text input"
-                                />
-                            </div>
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={() => setShowCaptcha(false)}
-                                    className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-200"
-                                    aria-label="Cancel CAPTCHA verification"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleCaptchaSubmit}
-                                    disabled={isLoading}
-                                    className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                                    aria-label="Submit CAPTCHA verification"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            <span>Verifying...</span>
-                                        </>
-                                    ) : (
-                                        'Verify'
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );
