@@ -2,11 +2,6 @@ const User = require('../models/User');
 const { generateTokenPair, verifyRefreshToken } = require('../utils/jwt');
 const logger = require('../utils/logger');
 
-/**
- * @desc    Register new user
- * @route   POST /api/auth/register
- * @access  Public
- */
 const register = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
@@ -44,11 +39,6 @@ const register = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Login user
- * @route   POST /api/auth/login
- * @access  Public
- */
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -125,11 +115,6 @@ const login = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Refresh access token
- * @route   POST /api/auth/refresh
- * @access  Public
- */
 const refreshToken = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
@@ -182,11 +167,6 @@ const refreshToken = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Logout user
- * @route   POST /api/auth/logout
- * @access  Private
- */
 const logout = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
@@ -204,11 +184,7 @@ const logout = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Get current user
- * @route   GET /api/auth/me
- * @access  Private
- */
+
 const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
@@ -235,4 +211,5 @@ module.exports = {
   refreshToken,
   logout,
   getMe
+
 };
