@@ -5,11 +5,6 @@ const {
   getScraperConfig
 } = require('../config/scraperConfig');
 
-/**
- * @desc    Get all available scraper sites
- * @route   GET /api/scraper/sites
- * @access  Public
- */
 const getSites = async (req, res, next) => {
   try {
     const sites = getAvailableSites();
@@ -23,11 +18,6 @@ const getSites = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Get available fields for a specific site
- * @route   GET /api/scraper/sites/:site/fields
- * @access  Public
- */
 const getSiteFields = async (req, res, next) => {
   try {
     const { site } = req.params;
@@ -55,11 +45,6 @@ const getSiteFields = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Get configuration for all sites with their fields
- * @route   GET /api/scraper/config
- * @access  Public
- */
 const getScraperConfiguration = async (req, res, next) => {
   try {
     const sites = getAvailableSites();
@@ -83,4 +68,5 @@ module.exports = {
   getSites,
   getSiteFields,
   getScraperConfiguration
+
 };
