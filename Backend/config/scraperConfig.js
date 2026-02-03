@@ -1,7 +1,3 @@
-/**
- * Configuration for available scraper sites and their supported fields
- */
-
 const scraperConfig = {
   madeinchina: {
     name: 'Made in China',
@@ -114,9 +110,6 @@ const scraperConfig = {
   }
 };
 
-/**
- * Get configuration for a specific site
- */
 const getScraperConfig = (site) => {
   const config = scraperConfig[site.toLowerCase()];
   if (!config) {
@@ -125,25 +118,17 @@ const getScraperConfig = (site) => {
   return config;
 };
 
-/**
- * Get available fields for a site
- */
 const getAvailableFields = (site) => {
   const config = getScraperConfig(site);
   return config.fields;
 };
 
-/**
- * Get default fields for a site
- */
+
 const getDefaultFields = (site) => {
   const config = getScraperConfig(site);
   return config.defaultFields;
 };
 
-/**
- * Validate fields for a site
- */
 const validateFields = (site, fields) => {
   const config = getScraperConfig(site);
   const validFieldIds = config.fields.map(f => f.id);
@@ -156,9 +141,6 @@ const validateFields = (site, fields) => {
   };
 };
 
-/**
- * Get all available sites
- */
 const getAvailableSites = () => {
   return Object.keys(scraperConfig).map(key => ({
     id: key,
@@ -173,4 +155,5 @@ module.exports = {
   getDefaultFields,
   validateFields,
   getAvailableSites
+
 };
