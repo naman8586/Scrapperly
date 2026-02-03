@@ -1,137 +1,9 @@
-// const { runScraper } = require('../utils/ScraperUtils');
-// const winston = require('winston');
-// const path = require('path');
-
-// // Logger setup
-// const logger = winston.createLogger({
-//   level: 'info',
-//   format: winston.format.combine(
-//     winston.format.timestamp(),
-//     winston.format.json()
-//   ),
-//   transports: [
-//     new winston.transports.Console(),
-//     new winston.transports.File({
-//       filename: path.join(__dirname, '..', 'logs', 'scraper.log'),
-//       maxsize: 10 * 1024 * 1024, // 10MB
-//       maxFiles: 3,
-//     }),
-//   ],
-// });
-
-// exports.runScrapers = async (req, res) => {
-//   const { keyword, sites, pageCount = '1', retries = '3', fields } = req.body;
-
-//   // Validate inputs
-//   if (!keyword || !Array.isArray(sites) || sites.length === 0 || !fields) {
-//     logger.warn({
-//       message: 'Missing or invalid parameters in /api/scrape-multi',
-//       details: { keyword, sites, pageCount, retries, fields },
-//     });
-//     return res.status(400).json({
-//       message: 'Missing or invalid keyword, sites array, or fields',
-//       details: { keyword, sites, pageCount, retries, fields },
-//     });
-//   }
-
-//   const ALLOWED_SITES = process.env.ALLOWED_SITES
-//     ? process.env.ALLOWED_SITES.split(',').map((s) => s.trim().toLowerCase())
-//     : [];
-
-//   // Validate sites
-//   const invalidSites = sites.filter((site) => !ALLOWED_SITES.includes(site.toLowerCase()));
-//   if (invalidSites.length > 0) {
-//     logger.warn({
-//       message: `Invalid sites in /api/scrape-multi: ${invalidSites.join(', ')}`,
-//       allowedSites: ALLOWED_SITES,
-//     });
-//     return res.status(400).json({
-//       message: `Invalid sites: ${invalidSites.join(', ')}. Available sites: ${ALLOWED_SITES.join(', ')}`,
-//     });
-//   }
-
-//   // Validate numeric inputs
-//   const pageCountNum = parseInt(pageCount, 10);
-//   const retriesNum = parseInt(retries, 10);
-//   if (isNaN(pageCountNum) || pageCountNum < 1 || isNaN(retriesNum) || retriesNum < 0) {
-//     logger.warn({
-//       message: 'Invalid pageCount or retries in /api/scrape-multi',
-//       details: { pageCount, retries },
-//     });
-//     return res.status(400).json({
-//       message: 'pageCount and retries must be positive integers',
-//     });
-//   }
-
-//   try {
-//     // Run all scrapers concurrently
-//     const scraperPromises = sites.map((site) =>
-//       runScraper(site, keyword, pageCountNum, retriesNum, fields)
-//         .then((result) => ({
-//           site,
-//           status: result.status === 'captcha_required' ? 'captcha_required' : 'success',
-//           ...result,
-//         }))
-//         .catch((error) => ({
-//           site,
-//           status: 'error',
-//           error: error.message,
-//         }))
-//     );
-
-//     const results = await Promise.all(scraperPromises);
-
-//     // Format the results
-//     const formattedResults = {};
-//     results.forEach((result) => {
-//       formattedResults[result.site] = {
-//         status: result.status,
-//         ...(result.status === 'success'
-//           ? { message: 'Scraping completed successfully', products: result.products || [] }
-//           : result.status === 'captcha_required'
-//           ? {
-//               message: 'CAPTCHA required',
-//               captcha: result.captcha,
-//               sessionId: `${result.site}_${Date.now()}`,
-//             }
-//           : { message: 'Scraping failed', error: result.error }),
-//       };
-//     });
-
-//     logger.info({
-//       message: 'Multi-site scraping completed',
-//       results: Object.keys(formattedResults).map((site) => ({
-//         site,
-//         status: formattedResults[site].status,
-//         productCount: formattedResults[site].products?.length || 0,
-//       })),
-//     });
-
-//     res.json({
-//       message: 'Multi-site scraping completed',
-//       results: formattedResults,
-//     });
-//   } catch (err) {
-//     logger.error({
-//       message: 'Unexpected error in /api/scrape-multi',
-//       error: err.message,
-//       stack: err.stack,
-//     });
-//     res.status(500).json({
-//       message: 'Unexpected error while scraping multiple sites',
-//       error: err.message,
-//     });
-//   }
-// };
-
-
 const ScraperJob = require('../models/ScraperJob');
 const ScraperResult = require('../models/ScraperResult');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs').promises;
 
-// Import scraper modules dynamically
 const getScraperModule = (site) => {
   try {
     return require(`../scrapers/${site}.py`);
@@ -141,11 +13,6 @@ const getScraperModule = (site) => {
   }
 };
 
-/**
- * @desc    Create new scraper job
- * @route   POST /api/scraper/jobs
- * @access  Private
- */
 const createJob = async (req, res, next) => {
   try {
     const { site, searchQuery, selectedFields, config } = req.body;
@@ -188,11 +55,6 @@ const createJob = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Get all user jobs
- * @route   GET /api/scraper/jobs
- * @access  Private
- */
 const getJobs = async (req, res, next) => {
   try {
     const { status, site, page = 1, limit = 10 } = req.query;
@@ -252,11 +114,6 @@ const getJobById = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Get job results
- * @route   GET /api/scraper/jobs/:id/results
- * @access  Private
- */
 const getJobResults = async (req, res, next) => {
   try {
     const { page = 1, limit = 50 } = req.query;
@@ -295,11 +152,6 @@ const getJobResults = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Cancel job
- * @route   PUT /api/scraper/jobs/:id/cancel
- * @access  Private
- */
 const cancelJob = async (req, res, next) => {
   try {
     const job = await ScraperJob.findOne({
@@ -380,23 +232,13 @@ const deleteJob = async (req, res, next) => {
   }
 };
 
-/**
- * Start scraping process (background task)
- */
 const startScraping = async (job) => {
   try {
     job.status = 'running';
     job.startedAt = Date.now();
     await job.save();
 
-    // TODO: Integrate with your Python scrapers
-    // For now, this is a placeholder
     logger.info(`Starting scraper for job ${job._id}`);
-
-    // Simulate scraping process
-    // In production, this would spawn Python process or use child_process
-    // Example: const { spawn } = require('child_process');
-    // const pythonProcess = spawn('python', ['scrapers/'+job.site+'.py', job.searchQuery]);
 
   } catch (error) {
     job.status = 'failed';
@@ -417,4 +259,5 @@ module.exports = {
   getJobResults,
   cancelJob,
   deleteJob
+
 };
